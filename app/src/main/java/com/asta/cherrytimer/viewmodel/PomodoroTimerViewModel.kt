@@ -78,6 +78,10 @@ class PomodoroTimerViewModel(application: Application) : AndroidViewModel(applic
         val longBreak = prefs.getInt("pref_long_dur", 15)
         val autoSwitch = prefs.getBoolean("pref_auto_switch", false)
         val sound = prefs.getBoolean("pref_sound", true)
+        val taskName = prefs.getString("pref_task_name", "") ?: ""
+        val sessionCount = prefs.getInt("pref_session_count", 1)
+        val modeStr = prefs.getString("pref_current_mode", TimerMode.FOCUS.name) ?: TimerMode.FOCUS.name
+        val currentMode = try { TimerMode.valueOf(modeStr) } catch (e: Exception) { TimerMode.FOCUS }
         val historyJson = prefs.getString("pref_history", "[]") ?: "[]"
 
         val historyList = try {
@@ -86,7 +90,37 @@ class PomodoroTimerViewModel(application: Application) : AndroidViewModel(applic
             emptyList()
         }
 
-        val initialDurationSec = focus * 60
+        val defaultDurationSec = when (currentMode) {
+            TimerMode.FOCUS -> focus * 60
+            TimerMode.SHORT_BREAK -> shortBreak * 60
+            TimerMode.LONG_BREAK -> longBreak * 60
+        }
+
+        val isRunning = prefs.getBoolean("pref_is_running", false)
+        val targetEndTime = prefs.getLong("pref_target_end_time", 0L)
+        val savedTimeLeft = prefs.getInt("pref_time_left_seconds", defaultDurationSec)
+        val savedTotalTime = prefs.getInt("pref_total_time_seconds", defaultDurationSec)
+
+        var finalTimeLeft = savedTimeLeft
+        var finalTotalTime = savedTotalTime
+        var finalRunning = isRunning
+
+        if (isRunning && targetEndTime > 0L) {
+            val now = System.currentTimeMillis()
+            val remainingMillis = targetEndTime - now
+            val remainingSeconds = ((remainingMillis + 999L) / 1000L).toInt()
+
+            if (remainingSeconds <= 0) {
+                finalTimeLeft = 0
+                finalRunning = false
+                handleBackgroundCompletion(currentMode, focus, taskName, autoSwitch)
+            } else {
+                finalTimeLeft = remainingSeconds
+                finalTotalTime = savedTotalTime
+                finalRunning = true
+            }
+        }
+
         _uiState.update {
             val updated = it.copy(
                 focusDurationMinutes = focus,
@@ -95,17 +129,87 @@ class PomodoroTimerViewModel(application: Application) : AndroidViewModel(applic
                 autoSwitchModes = autoSwitch,
                 soundEnabled = sound,
                 history = historyList,
-                timeLeftSeconds = initialDurationSec,
-                totalTimeSeconds = initialDurationSec
+                currentMode = currentMode,
+                sessionCount = sessionCount,
+                taskName = taskName,
+                timeLeftSeconds = finalTimeLeft,
+                totalTimeSeconds = finalTotalTime,
+                isRunning = finalRunning
             )
             calculateStats(updated)
         }
+
+        if (finalRunning) {
+            startTimerJob(targetEndTime)
+        }
+    }
+
+    private fun handleBackgroundCompletion(mode: TimerMode, focusDuration: Int, task: String, autoSwitch: Boolean) {
+        if (mode == TimerMode.FOCUS) {
+            val record = PomodoroSessionRecord(
+                taskName = task.ifBlank { "Focus Session" },
+                durationMinutes = focusDuration,
+                mode = TimerMode.FOCUS
+            )
+            _uiState.update {
+                val updated = it.copy(history = listOf(record) + it.history)
+                calculateStats(updated)
+            }
+        }
+        advanceToNextModeInternal()
+        if (autoSwitch) {
+            startTimer()
+        }
+    }
+
+    private fun advanceToNextModeInternal() {
+        val state = _uiState.value
+        when (state.currentMode) {
+            TimerMode.FOCUS -> {
+                if (state.sessionCount >= 4) {
+                    switchModeInternal(TimerMode.LONG_BREAK)
+                    _uiState.update { it.copy(sessionCount = 1) }
+                } else {
+                    switchModeInternal(TimerMode.SHORT_BREAK)
+                }
+            }
+            TimerMode.SHORT_BREAK -> {
+                switchModeInternal(TimerMode.FOCUS)
+                _uiState.update { it.copy(sessionCount = (state.sessionCount + 1).coerceAtMost(4)) }
+            }
+            TimerMode.LONG_BREAK -> {
+                switchModeInternal(TimerMode.FOCUS)
+                _uiState.update { it.copy(sessionCount = 1) }
+            }
+        }
+    }
+
+    private fun switchModeInternal(mode: TimerMode) {
+        val durationMinutes = when (mode) {
+            TimerMode.FOCUS -> _uiState.value.focusDurationMinutes
+            TimerMode.SHORT_BREAK -> _uiState.value.shortBreakDurationMinutes
+            TimerMode.LONG_BREAK -> _uiState.value.longBreakDurationMinutes
+        }
+        val durationSeconds = durationMinutes * 60
+        _uiState.update {
+            it.copy(
+                currentMode = mode,
+                timeLeftSeconds = durationSeconds,
+                totalTimeSeconds = durationSeconds,
+                isRunning = false
+            )
+        }
+        saveToPrefs()
     }
 
     private fun saveToPrefs() {
         val state = _uiState.value
         try {
             val historyString = json.encodeToString(state.history)
+            val targetEndTime = if (state.isRunning) {
+                System.currentTimeMillis() + (state.timeLeftSeconds * 1000L)
+            } else 0L
+
             prefs.edit()
                 .putInt("pref_focus_dur", state.focusDurationMinutes)
                 .putInt("pref_short_dur", state.shortBreakDurationMinutes)
@@ -113,6 +217,14 @@ class PomodoroTimerViewModel(application: Application) : AndroidViewModel(applic
                 .putBoolean("pref_auto_switch", state.autoSwitchModes)
                 .putBoolean("pref_sound", state.soundEnabled)
                 .putString("pref_history", historyString)
+                .putString("pref_task_name", state.taskName)
+                .putInt("pref_session_count", state.sessionCount)
+                .putString("pref_current_mode", state.currentMode.name)
+                .putBoolean("pref_is_running", state.isRunning)
+                .putLong("pref_target_end_time", targetEndTime)
+                .putInt("pref_time_left_seconds", state.timeLeftSeconds)
+                .putInt("pref_total_time_seconds", state.totalTimeSeconds)
+                .putLong("pref_last_saved_time", System.currentTimeMillis())
                 .apply()
         } catch (e: Exception) {
             // Ignore
@@ -190,6 +302,7 @@ class PomodoroTimerViewModel(application: Application) : AndroidViewModel(applic
 
     fun setTaskName(name: String) {
         _uiState.update { it.copy(taskName = name) }
+        saveToPrefs()
     }
 
     fun switchMode(mode: TimerMode) {
@@ -207,6 +320,7 @@ class PomodoroTimerViewModel(application: Application) : AndroidViewModel(applic
                 totalTimeSeconds = durationSeconds
             )
         }
+        saveToPrefs()
     }
 
     fun setDurations(focus: Int, shortBreak: Int, longBreak: Int) {
@@ -261,11 +375,15 @@ class PomodoroTimerViewModel(application: Application) : AndroidViewModel(applic
 
     fun startTimer() {
         if (_uiState.value.isRunning) return
+        val targetEndTime = System.currentTimeMillis() + (_uiState.value.timeLeftSeconds * 1000L)
         _uiState.update { it.copy(isRunning = true) }
+        saveToPrefs()
+        startTimerJob(targetEndTime)
+    }
 
+    private fun startTimerJob(targetEndTime: Long) {
         timerJob?.cancel()
         timerJob = viewModelScope.launch {
-            val targetEndTime = System.currentTimeMillis() + (_uiState.value.timeLeftSeconds * 1000L)
             while (_uiState.value.isRunning) {
                 val now = System.currentTimeMillis()
                 val remainingMillis = targetEndTime - now
@@ -273,10 +391,12 @@ class PomodoroTimerViewModel(application: Application) : AndroidViewModel(applic
 
                 if (remainingSeconds <= 0) {
                     _uiState.update { it.copy(timeLeftSeconds = 0, isRunning = false) }
+                    saveToPrefs()
                     onTimerFinished()
                     break
                 } else {
                     _uiState.update { it.copy(timeLeftSeconds = remainingSeconds) }
+                    saveToPrefs()
                 }
                 delay(100L)
             }
@@ -286,6 +406,7 @@ class PomodoroTimerViewModel(application: Application) : AndroidViewModel(applic
     fun pauseTimer() {
         _uiState.update { it.copy(isRunning = false) }
         timerJob?.cancel()
+        saveToPrefs()
     }
 
     fun resetTimer() {
@@ -303,11 +424,13 @@ class PomodoroTimerViewModel(application: Application) : AndroidViewModel(applic
                 totalTimeSeconds = durationSeconds
             )
         }
+        saveToPrefs()
     }
 
     fun skipTimer() {
         pauseTimer()
         advanceToNextMode()
+        saveToPrefs()
     }
 
     private fun onTimerFinished() {

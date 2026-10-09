@@ -1,5 +1,6 @@
 package com.asta.cherrytimer.ui.screens
 
+import android.content.res.Configuration
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -7,10 +8,15 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.material.icons.rounded.Clear
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.NotificationsOff
@@ -24,9 +30,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -46,6 +55,8 @@ fun TimerScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val haptic = LocalHapticFeedback.current
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     var showHistorySheet by remember { mutableStateOf(false) }
     var showSettingsSheet by remember { mutableStateOf(false) }
@@ -113,10 +124,10 @@ fun TimerScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            val isWideScreen = maxWidth >= 600.dp
+            val isWideScreen = maxWidth >= 600.dp || isLandscape
 
-            if (isWideScreen) {
-                // Adaptive Two-Pane Side-by-Side Layout for Tablet / Foldable / Landscape
+            if (isWideScreen && maxWidth >= 600.dp) {
+                // Adaptive Two-Pane Side-by-Side Layout for Tablet / Foldable / Large Landscape
                 Row(
                     modifier = Modifier
                         .fillMaxSize()
@@ -128,12 +139,23 @@ fun TimerScreen(
                     Column(
                         modifier = Modifier
                             .weight(1f)
-                            .fillMaxHeight(),
+                            .fillMaxHeight()
+                            .verticalScroll(rememberScrollState()),
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.SpaceBetween
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         ModeSelector(uiState.currentMode, viewModel, haptic)
-                        TimerCircularDisplay(uiState, timeFormatted)
+                        TimerCircularDisplay(
+                            uiState = uiState,
+                            timeFormatted = timeFormatted,
+                            circleSize = 200.dp,
+                            canvasSize = 170.dp,
+                            timeFontSize = 38.sp,
+                            onClick = {
+                                CherryHapticsUtil.triggerClick(haptic)
+                                viewModel.toggleTimer()
+                            }
+                        )
                         TaskInputField(uiState.taskName, viewModel)
                         TimerControlsRow(viewModel, haptic)
                     }
@@ -200,13 +222,19 @@ fun TimerScreen(
                     }
                 }
             } else {
-                // Standard Single-Column Layout for Mobile Portrait
+                // Standard Single-Column Layout for Mobile Portrait & Phone Landscape
+                val circleSize = if (isLandscape) 150.dp else 240.dp
+                val canvasSize = if (isLandscape) 120.dp else 200.dp
+                val timeFontSize = if (isLandscape) 30.sp else 44.sp
+
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(20.dp),
+                        .verticalScroll(rememberScrollState())
+                        .imePadding()
+                        .padding(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.SpaceBetween
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     ModeSelector(uiState.currentMode, viewModel, haptic)
 
@@ -220,7 +248,17 @@ fun TimerScreen(
                         }
                     )
 
-                    TimerCircularDisplay(uiState, timeFormatted)
+                    TimerCircularDisplay(
+                        uiState = uiState,
+                        timeFormatted = timeFormatted,
+                        circleSize = circleSize,
+                        canvasSize = canvasSize,
+                        timeFontSize = timeFontSize,
+                        onClick = {
+                            CherryHapticsUtil.triggerClick(haptic)
+                            viewModel.toggleTimer()
+                        }
+                    )
 
                     TaskInputField(uiState.taskName, viewModel)
 
@@ -305,10 +343,17 @@ fun ModeSelector(
 }
 
 @Composable
-fun TimerCircularDisplay(uiState: PomodoroUiState, timeFormatted: String) {
+fun TimerCircularDisplay(
+    uiState: PomodoroUiState,
+    timeFormatted: String,
+    circleSize: androidx.compose.ui.unit.Dp = 240.dp,
+    canvasSize: androidx.compose.ui.unit.Dp = 200.dp,
+    timeFontSize: androidx.compose.ui.unit.TextUnit = 44.sp,
+    onClick: () -> Unit
+) {
     Box(
         modifier = Modifier
-            .size(240.dp)
+            .size(circleSize)
             .shadow(
                 elevation = if (uiState.isRunning) 24.dp else 8.dp,
                 shape = CircleShape,
@@ -316,14 +361,15 @@ fun TimerCircularDisplay(uiState: PomodoroUiState, timeFormatted: String) {
             )
             .clip(CircleShape)
             .background(CherrySurface)
-            .border(1.5.dp, CherryBorder, CircleShape),
+            .border(1.5.dp, CherryBorder, CircleShape)
+            .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         val progress = if (uiState.totalTimeSeconds > 0) {
             uiState.timeLeftSeconds.toFloat() / uiState.totalTimeSeconds.toFloat()
         } else 0f
 
-        Canvas(modifier = Modifier.size(200.dp)) {
+        Canvas(modifier = Modifier.size(canvasSize)) {
             val strokeWidth = 10.dp.toPx()
             drawArc(
                 color = CherryBorder.copy(alpha = 0.5f),
@@ -361,31 +407,31 @@ fun TimerCircularDisplay(uiState: PomodoroUiState, timeFormatted: String) {
             Text(
                 text = modeLabel,
                 color = CherryMutedText,
-                fontSize = 11.sp,
+                fontSize = 10.sp,
                 fontWeight = FontWeight.SemiBold,
-                letterSpacing = 2.sp
+                letterSpacing = 1.5.sp
             )
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = timeFormatted,
                 color = CherryMainText,
-                fontSize = 44.sp,
+                fontSize = timeFontSize,
                 fontWeight = FontWeight.Bold,
                 fontFamily = FontFamily.Monospace
             )
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(2.dp))
             if (uiState.currentMode == TimerMode.FOCUS) {
                 Text(
                     text = "Round ${uiState.sessionCount} of 4",
                     color = CherryPrimary,
-                    fontSize = 12.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Medium
                 )
             } else {
                 Text(
                     text = if (uiState.isRunning) "Resting..." else "Paused",
                     color = CherryPrimary,
-                    fontSize = 12.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Medium
                 )
             }
@@ -395,6 +441,7 @@ fun TimerCircularDisplay(uiState: PomodoroUiState, timeFormatted: String) {
 
 @Composable
 fun TaskInputField(taskName: String, viewModel: PomodoroTimerViewModel) {
+    val keyboardController = LocalSoftwareKeyboardController.current
     OutlinedTextField(
         value = taskName,
         onValueChange = { viewModel.setTaskName(it) },
@@ -405,6 +452,19 @@ fun TaskInputField(taskName: String, viewModel: PomodoroTimerViewModel) {
                 fontSize = 14.sp
             )
         },
+        trailingIcon = {
+            if (taskName.isNotEmpty()) {
+                IconButton(onClick = { viewModel.setTaskName("") }) {
+                    Icon(
+                        imageVector = Icons.Rounded.Clear,
+                        contentDescription = "Clear task",
+                        tint = CherryMutedText
+                    )
+                }
+            }
+        },
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+        keyboardActions = KeyboardActions(onDone = { keyboardController?.hide() }),
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
