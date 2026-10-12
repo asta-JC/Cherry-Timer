@@ -18,6 +18,14 @@ Cherry Timer features the signature **Cherry Dark** aesthetic, crafted for deep 
 
 ---
 
+## 📸 Screenshots
+
+| Focus Session | Short Break | Timer Settings |
+|---------------|-------------|----------------|
+| ![Focus Session](screenshots/focus-session.jpg) | ![Short Break](screenshots/short-break.jpg) | ![Timer Settings](screenshots/timer-settings.jpg) |
+
+---
+
 ## 🚀 Core Features
 
 - **Pomodoro Focus & Break Modes**: Easily switch between deep focus sessions, short breaks, and long breaks with customizable durations.
