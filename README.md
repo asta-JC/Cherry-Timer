@@ -67,12 +67,12 @@ Cherry Timer features the signature **Cherry Dark** aesthetic, crafted for deep 
 
 ---
 
-### 📄 License
+## 📄 License
 
 This project is developed as part of Asta's project series. Feel free to use and adapt for personal and educational use!
 
 ---
 
 <p align="center">
-  <b>Made with ❤️ & 🍒 by Asta</b>
+  Made with ❤️ & 🍒 by Asta
 </p>
