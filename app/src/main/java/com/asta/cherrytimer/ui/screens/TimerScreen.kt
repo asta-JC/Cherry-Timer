@@ -1,6 +1,7 @@
 package com.asta.cherrytimer.ui.screens
 
 import android.content.res.Configuration
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -28,14 +29,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -148,8 +157,8 @@ fun TimerScreen(
                         TimerCircularDisplay(
                             uiState = uiState,
                             timeFormatted = timeFormatted,
-                            circleSize = 200.dp,
-                            canvasSize = 170.dp,
+                            circleSize = 220.dp,
+                            canvasSize = 180.dp,
                             timeFontSize = 38.sp,
                             onClick = {
                                 CherryHapticsUtil.triggerClick(haptic)
@@ -223,9 +232,8 @@ fun TimerScreen(
                 }
             } else {
                 // Standard Single-Column Layout for Mobile Portrait & Phone Landscape
-                val circleSize = if (isLandscape) 150.dp else 240.dp
-                val canvasSize = if (isLandscape) 120.dp else 200.dp
-                val timeFontSize = if (isLandscape) 30.sp else 44.sp
+                val circleSize = if (isLandscape) 180.dp else 250.dp
+                val timeFontSize = if (isLandscape) 32.sp else 44.sp
 
                 Column(
                     modifier = Modifier
@@ -252,7 +260,7 @@ fun TimerScreen(
                         uiState = uiState,
                         timeFormatted = timeFormatted,
                         circleSize = circleSize,
-                        canvasSize = canvasSize,
+                        canvasSize = circleSize,
                         timeFontSize = timeFontSize,
                         onClick = {
                             CherryHapticsUtil.triggerClick(haptic)
@@ -342,99 +350,433 @@ fun ModeSelector(
     }
 }
 
+/**
+ * TimerCircularDisplay acts as a wrapper around [CherryTimerView] so it drops
+ * directly into the existing TimerScreen layout without shifting any screen elements.
+ */
 @Composable
 fun TimerCircularDisplay(
     uiState: PomodoroUiState,
     timeFormatted: String,
-    circleSize: androidx.compose.ui.unit.Dp = 240.dp,
-    canvasSize: androidx.compose.ui.unit.Dp = 200.dp,
-    timeFontSize: androidx.compose.ui.unit.TextUnit = 44.sp,
+    circleSize: Dp = 250.dp,
+    @Suppress("UNUSED_PARAMETER") canvasSize: Dp = 200.dp,
+    timeFontSize: TextUnit = 44.sp,
     onClick: () -> Unit
 ) {
+    val progress = if (uiState.totalTimeSeconds > 0) {
+        uiState.timeLeftSeconds.toFloat() / uiState.totalTimeSeconds.toFloat()
+    } else 0f
+
+    val modeLabel = when (uiState.currentMode) {
+        TimerMode.FOCUS -> "FOCUS SESSION"
+        TimerMode.SHORT_BREAK -> "SHORT BREAK"
+        TimerMode.LONG_BREAK -> "LONG BREAK"
+    }
+
+    val statusText = if (uiState.currentMode == TimerMode.FOCUS) {
+        if (uiState.isRunning) "Running" else "Paused"
+    } else {
+        if (uiState.isRunning) "Resting..." else "Paused"
+    }
+
+    CherryTimerView(
+        progress = progress,
+        timeText = timeFormatted,
+        statusText = statusText,
+        isRunning = uiState.isRunning,
+        currentMode = uiState.currentMode,
+        modeLabel = modeLabel,
+        timeFontSize = timeFontSize,
+        onClick = onClick,
+        modifier = Modifier.size(circleSize)
+    )
+}
+
+/**
+ * Mode colors data holder for clean palette switching per timer mode.
+ */
+private data class CherryModePalette(
+    val gradientStart: Color,
+    val gradientEnd: Color,
+    val darkShadow: Color,
+    val trackOutline: Color
+)
+
+/**
+ * Reusable Cherry-shaped Timer view rendered entirely in Jetpack Compose Canvas.
+ *
+ * @param progress Float value from 0f to 1f indicating timer progress remaining.
+ * @param timeText Formatted text for remaining time (e.g., "05:00").
+ * @param statusText Status description (e.g., "Paused" / "Running").
+ * @param isRunning True if timer is running, triggering stem sway & glow pulse animations.
+ * @param modifier Layout modifier for sizing and padding.
+ * @param currentMode Current TimerMode (FOCUS, SHORT_BREAK, LONG_BREAK) for custom theme colors.
+ * @param modeLabel Title string displayed above time (e.g., "FOCUS SESSION").
+ * @param timeFontSize Text size for the main timer readout.
+ * @param onClick Callback when the cherry timer is tapped.
+ */
+@Composable
+fun CherryTimerView(
+    progress: Float,
+    timeText: String,
+    statusText: String,
+    isRunning: Boolean,
+    modifier: Modifier = Modifier,
+    currentMode: TimerMode = TimerMode.FOCUS,
+    modeLabel: String = "FOCUS SESSION",
+    timeFontSize: TextUnit = 44.sp,
+    onClick: () -> Unit = {}
+) {
+    // -------------------------------------------------------------
+    // ANIMATIONS
+    // -------------------------------------------------------------
+
+    // 1. Stem sway animation: Gently moves top joint left and right while running
+    val infiniteTransition = rememberInfiniteTransition(label = "CherrySwayTransition")
+    val swayOffsetPx by if (isRunning) {
+        infiniteTransition.animateFloat(
+            initialValue = -10f,
+            targetValue = 10f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 2200, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "StemSwayAnimation"
+        )
+    } else {
+        remember { mutableStateOf(0f) }
+    }
+
+    // 2. Glow pulse animation: Soft glow breathing effect while running, calm glow when paused
+    val glowAlpha by if (isRunning) {
+        infiniteTransition.animateFloat(
+            initialValue = 0.35f,
+            targetValue = 0.80f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 1600, easing = LinearEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "GlowPulseAnimation"
+        )
+    } else {
+        remember { mutableStateOf(0.25f) }
+    }
+
+    // 3. Pop bounce animation when session finishes (progress reaching 0)
+    val bounceScale = remember { Animatable(1f) }
+    LaunchedEffect(progress) {
+        if (progress <= 0f) {
+            bounceScale.animateTo(1.14f, spring(stiffness = Spring.StiffnessMedium))
+            bounceScale.animateTo(1f, spring(stiffness = Spring.StiffnessLow))
+        }
+    }
+
+    // -------------------------------------------------------------
+    // COLOR PALETTE PER MODE
+    // -------------------------------------------------------------
+    val palette = when (currentMode) {
+        TimerMode.FOCUS -> CherryModePalette(
+            gradientStart = Color(0xFFFF1744), // Glossy Cherry Red
+            gradientEnd = Color(0xFFFF2D6B),   // Signature Cherry Pink-Red
+            darkShadow = Color(0xFF700018),    // Deep Red Shadow
+            trackOutline = Color(0xFF4A0E17)   // Dim Dark Red Track
+        )
+        TimerMode.SHORT_BREAK -> CherryModePalette(
+            gradientStart = Color(0xFFFF4081), // Light Pink-Red
+            gradientEnd = Color(0xFFFF2D6B),   // Vibrant Pink-Red
+            darkShadow = Color(0xFF880E4F),    // Deep Pink Shadow
+            trackOutline = Color(0xFF4A0E2E)   // Dim Dark Pink Track
+        )
+        TimerMode.LONG_BREAK -> CherryModePalette(
+            gradientStart = Color(0xFFE040FB), // Magenta/Berry Highlight
+            gradientEnd = Color(0xFF8E24AA),   // Deep Berry Purple
+            darkShadow = Color(0xFF4A148C),    // Dark Berry Shadow
+            trackOutline = Color(0xFF380B24)   // Dim Dark Berry Track
+        )
+    }
+
+    // Container Box applying scale bounce, clipping, and tap click listener
     Box(
-        modifier = Modifier
-            .size(circleSize)
-            .shadow(
-                elevation = if (uiState.isRunning) 24.dp else 8.dp,
-                shape = CircleShape,
-                spotColor = CherryPrimary.copy(alpha = if (uiState.isRunning) 0.6f else 0.2f)
-            )
+        modifier = modifier
+            .graphicsLayer {
+                scaleX = bounceScale.value
+                scaleY = bounceScale.value
+            }
             .clip(CircleShape)
-            .background(CherrySurface)
-            .border(1.5.dp, CherryBorder, CircleShape)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        val progress = if (uiState.totalTimeSeconds > 0) {
-            uiState.timeLeftSeconds.toFloat() / uiState.totalTimeSeconds.toFloat()
-        } else 0f
+        // -------------------------------------------------------------
+        // CANVAS DRAWING CHERRY GRAPHICS
+        // -------------------------------------------------------------
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val canvasW = size.width
+            val canvasH = size.height
 
-        Canvas(modifier = Modifier.size(canvasSize)) {
-            val strokeWidth = 10.dp.toPx()
+            // --- GEOMETRY POSITIONS ---
+            // Main Cherry (Front Right Cherry where timer text sits)
+            val mainCx = canvasW * 0.52f
+            val mainCy = canvasH * 0.58f
+            val mainRadius = canvasW * 0.32f
+
+            // Second Cherry (Smaller Back Left Cherry forming a pair)
+            val secondCx = canvasW * 0.28f
+            val secondCy = canvasH * 0.50f
+            val secondRadius = canvasW * 0.21f
+
+            // Stem Joint Point at top (Where curved stems join together)
+            val stemJointX = canvasW * 0.50f + swayOffsetPx
+            val stemJointY = canvasH * 0.11f
+
+            // -------------------------------------------------------------
+            // DRAWING STEP 1: BACKGROUND GLOW
+            // Soft glowing aura behind the cherries on dark futuristic background
+            // -------------------------------------------------------------
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(
+                        palette.gradientEnd.copy(alpha = glowAlpha * 0.55f),
+                        palette.gradientStart.copy(alpha = glowAlpha * 0.20f),
+                        Color.Transparent
+                    ),
+                    center = Offset(mainCx, mainCy),
+                    radius = mainRadius * 1.50f
+                ),
+                radius = mainRadius * 1.50f,
+                center = Offset(mainCx, mainCy)
+            )
+
+            // -------------------------------------------------------------
+            // DRAWING STEP 2: SECOND CHERRY (Back Cherry)
+            // Drawn first so main cherry sits naturally in front of it
+            // -------------------------------------------------------------
+            // A) 3D Radial Shaded Body
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(
+                        palette.gradientStart.copy(alpha = 0.95f),
+                        palette.gradientEnd,
+                        palette.darkShadow
+                    ),
+                    center = Offset(secondCx - secondRadius * 0.35f, secondCy - secondRadius * 0.35f),
+                    radius = secondRadius * 1.25f
+                ),
+                radius = secondRadius,
+                center = Offset(secondCx, secondCy)
+            )
+            // B) Glossy Shine Spot on Second Cherry
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(
+                        Color.White.copy(alpha = 0.55f),
+                        Color.White.copy(alpha = 0.0f)
+                    ),
+                    center = Offset(secondCx - secondRadius * 0.38f, secondCy - secondRadius * 0.38f),
+                    radius = secondRadius * 0.42f
+                ),
+                radius = secondRadius * 0.42f,
+                center = Offset(secondCx - secondRadius * 0.38f, secondCy - secondRadius * 0.38f)
+            )
+
+            // -------------------------------------------------------------
+            // DRAWING STEP 3: CURVED GREEN STEMS
+            // Two thin green curved stem paths joining at the top joint
+            // -------------------------------------------------------------
+            val stemColor = Color(0xFF4CAF50) // Fresh Stem Green
+            val stemThicknessPx = 3.5.dp.toPx()
+
+            // Stem 1: Connects top of Main Cherry to top joint
+            val stem1Path = Path().apply {
+                moveTo(mainCx - canvasW * 0.02f, mainCy - mainRadius * 0.88f)
+                quadraticTo(
+                    canvasW * 0.62f + swayOffsetPx * 0.5f,
+                    canvasH * 0.32f,
+                    stemJointX,
+                    stemJointY
+                )
+            }
+            drawPath(
+                path = stem1Path,
+                color = stemColor,
+                style = Stroke(width = stemThicknessPx, cap = StrokeCap.Round)
+            )
+
+            // Stem 2: Connects top of Second Cherry to top joint
+            val stem2Path = Path().apply {
+                moveTo(secondCx, secondCy - secondRadius * 0.88f)
+                quadraticTo(
+                    canvasW * 0.32f + swayOffsetPx * 0.5f,
+                    canvasH * 0.26f,
+                    stemJointX,
+                    stemJointY
+                )
+            }
+            drawPath(
+                path = stem2Path,
+                color = stemColor,
+                style = Stroke(width = stemThicknessPx, cap = StrokeCap.Round)
+            )
+
+            // -------------------------------------------------------------
+            // DRAWING STEP 4: GREEN LEAF
+            // Attached near stem top joint, stays green in all modes
+            // -------------------------------------------------------------
+            val leafPath = Path().apply {
+                moveTo(stemJointX, stemJointY)
+                cubicTo(
+                    stemJointX + canvasW * 0.12f, stemJointY - canvasH * 0.06f,
+                    stemJointX + canvasW * 0.22f, stemJointY - canvasH * 0.02f,
+                    stemJointX + canvasW * 0.18f, stemJointY + canvasH * 0.05f
+                )
+                cubicTo(
+                    stemJointX + canvasW * 0.10f, stemJointY + canvasH * 0.06f,
+                    stemJointX + canvasW * 0.04f, stemJointY + canvasH * 0.03f,
+                    stemJointX, stemJointY
+                )
+            }
+            // Fill Leaf with Gradient Green
+            drawPath(
+                path = leafPath,
+                brush = Brush.linearGradient(
+                    colors = listOf(Color(0xFF81C784), Color(0xFF2E7D32)),
+                    start = Offset(stemJointX, stemJointY),
+                    end = Offset(stemJointX + canvasW * 0.18f, stemJointY + canvasH * 0.05f)
+                )
+            )
+            // Leaf Center Vein
+            val veinPath = Path().apply {
+                moveTo(stemJointX, stemJointY)
+                quadraticTo(
+                    stemJointX + canvasW * 0.10f, stemJointY + canvasH * 0.01f,
+                    stemJointX + canvasW * 0.16f, stemJointY + canvasH * 0.02f
+                )
+            }
+            drawPath(
+                path = veinPath,
+                color = Color(0xFF1B5E20),
+                style = Stroke(width = 1.5.dp.toPx(), cap = StrokeCap.Round)
+            )
+
+            // -------------------------------------------------------------
+            // DRAWING STEP 5: MAIN CHERRY BODY (Front Cherry)
+            // -------------------------------------------------------------
+            // A) Rich 3D Radial Gradient Shading
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(
+                        palette.gradientStart,
+                        palette.gradientEnd,
+                        palette.darkShadow
+                    ),
+                    center = Offset(mainCx - mainRadius * 0.35f, mainCy - mainRadius * 0.35f),
+                    radius = mainRadius * 1.25f
+                ),
+                radius = mainRadius,
+                center = Offset(mainCx, mainCy)
+            )
+
+            // B) Subtle Indentation Notch at Top of Main Cherry
+            val notchPath = Path().apply {
+                moveTo(mainCx - mainRadius * 0.25f, mainCy - mainRadius * 0.85f)
+                quadraticTo(
+                    mainCx, mainCy - mainRadius * 0.70f,
+                    mainCx + mainRadius * 0.25f, mainCy - mainRadius * 0.85f
+                )
+            }
+            drawPath(
+                path = notchPath,
+                color = palette.darkShadow.copy(alpha = 0.6f),
+                style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round)
+            )
+
+            // C) Glossy White Highlight Spot
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(
+                        Color.White.copy(alpha = 0.65f),
+                        Color.White.copy(alpha = 0.0f)
+                    ),
+                    center = Offset(mainCx - mainRadius * 0.42f, mainCy - mainRadius * 0.42f),
+                    radius = mainRadius * 0.42f
+                ),
+                radius = mainRadius * 0.42f,
+                center = Offset(mainCx - mainRadius * 0.42f, mainCy - mainRadius * 0.42f)
+            )
+
+            // -------------------------------------------------------------
+            // DRAWING STEP 6: TIMING PROGRESS OUTLINE STROKE
+            // Follows contour around main cherry body with rounded stroke caps
+            // -------------------------------------------------------------
+            val strokePx = 8.dp.toPx()
+            val outlineRadius = mainRadius + strokePx * 0.6f
+
+            // A) Dim Track Outline
             drawArc(
-                color = CherryBorder.copy(alpha = 0.5f),
+                color = palette.trackOutline,
                 startAngle = -90f,
                 sweepAngle = 360f,
                 useCenter = false,
-                style = androidx.compose.ui.graphics.drawscope.Stroke(
-                    width = strokeWidth,
-                    cap = androidx.compose.ui.graphics.StrokeCap.Round
-                )
+                topLeft = Offset(mainCx - outlineRadius, mainCy - outlineRadius),
+                size = Size(outlineRadius * 2, outlineRadius * 2),
+                style = Stroke(width = strokePx, cap = StrokeCap.Round)
             )
+
+            // B) Glowing Active Progress Arc Filling Clockwise
+            val sweepAngle = 360f * progress.coerceIn(0f, 1f)
             drawArc(
                 brush = Brush.sweepGradient(
-                    listOf(CherryPrimaryGradientStart, CherryPrimaryGradientEnd, CherryPrimary)
+                    colors = listOf(
+                        palette.gradientStart,
+                        palette.gradientEnd,
+                        Color.White
+                    ),
+                    center = Offset(mainCx, mainCy)
                 ),
                 startAngle = -90f,
-                sweepAngle = 360f * progress,
+                sweepAngle = sweepAngle,
                 useCenter = false,
-                style = androidx.compose.ui.graphics.drawscope.Stroke(
-                    width = strokeWidth,
-                    cap = androidx.compose.ui.graphics.StrokeCap.Round
-                )
+                topLeft = Offset(mainCx - outlineRadius, mainCy - outlineRadius),
+                size = Size(outlineRadius * 2, outlineRadius * 2),
+                style = Stroke(width = strokePx, cap = StrokeCap.Round)
             )
         }
 
+        // -------------------------------------------------------------
+        // DRAWING STEP 7: TIMER TEXT OVERLAY (Centered inside main cherry)
+        // -------------------------------------------------------------
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier
+                .offset(x = 5.dp, y = 14.dp) // Aligns with main cherry center
         ) {
-            val modeLabel = when (uiState.currentMode) {
-                TimerMode.FOCUS -> "FOCUS SESSION"
-                TimerMode.SHORT_BREAK -> "SHORT BREAK"
-                TimerMode.LONG_BREAK -> "LONG BREAK"
+            if (modeLabel.isNotEmpty()) {
+                Text(
+                    text = modeLabel,
+                    color = CherryMutedText,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 1.5.sp
+                )
+                Spacer(modifier = Modifier.height(2.dp))
             }
+
             Text(
-                text = modeLabel,
-                color = CherryMutedText,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = 1.5.sp
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = timeFormatted,
+                text = timeText,
                 color = CherryMainText,
                 fontSize = timeFontSize,
                 fontWeight = FontWeight.Bold,
                 fontFamily = FontFamily.Monospace
             )
+
             Spacer(modifier = Modifier.height(2.dp))
-            if (uiState.currentMode == TimerMode.FOCUS) {
-                Text(
-                    text = "Round ${uiState.sessionCount} of 4",
-                    color = CherryPrimary,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium
-                )
-            } else {
-                Text(
-                    text = if (uiState.isRunning) "Resting..." else "Paused",
-                    color = CherryPrimary,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium
-                )
-            }
+
+            Text(
+                text = statusText,
+                color = palette.gradientEnd,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium
+            )
         }
     }
 }
@@ -1025,16 +1367,16 @@ fun CherryAppIcon(modifier: Modifier = Modifier) {
             drawCircle(
                 color = CherryPrimary,
                 radius = width * 0.28f,
-                center = androidx.compose.ui.geometry.Offset(width * 0.32f, height * 0.7f)
+                center = Offset(width * 0.32f, height * 0.7f)
             )
             // Draw cherry 2 (right)
             drawCircle(
                 color = CherryPrimaryGradientStart,
                 radius = width * 0.28f,
-                center = androidx.compose.ui.geometry.Offset(width * 0.72f, height * 0.75f)
+                center = Offset(width * 0.72f, height * 0.75f)
             )
             // Draw stems
-            val path = androidx.compose.ui.graphics.Path().apply {
+            val path = Path().apply {
                 moveTo(width * 0.5f, height * 0.15f)
                 quadraticTo(width * 0.35f, height * 0.35f, width * 0.32f, height * 0.7f)
                 moveTo(width * 0.5f, height * 0.15f)
@@ -1043,13 +1385,13 @@ fun CherryAppIcon(modifier: Modifier = Modifier) {
             drawPath(
                 path = path,
                 color = Color(0xFF4CAF50),
-                style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3f, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+                style = Stroke(width = 3f, cap = StrokeCap.Round)
             )
             // Leaf
             drawCircle(
                 color = Color(0xFF81C784),
                 radius = width * 0.12f,
-                center = androidx.compose.ui.geometry.Offset(width * 0.55f, height * 0.2f)
+                center = Offset(width * 0.55f, height * 0.2f)
             )
         }
     }
