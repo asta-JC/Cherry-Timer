@@ -369,16 +369,85 @@ class PomodoroTimerViewModel(application: Application) : AndroidViewModel(applic
         if (_uiState.value.isRunning) {
             pauseTimer()
         } else {
+            if (_uiState.value.timeLeftSeconds <= 0) {
+                resetTimer()
+            }
             startTimer()
         }
     }
 
     fun startTimer() {
         if (_uiState.value.isRunning) return
+        if (_uiState.value.timeLeftSeconds <= 0) {
+            resetTimer()
+        }
         val targetEndTime = System.currentTimeMillis() + (_uiState.value.timeLeftSeconds * 1000L)
         _uiState.update { it.copy(isRunning = true) }
         saveToPrefs()
         startTimerJob(targetEndTime)
+    }
+
+    fun setPresetDuration(minutes: Int) {
+        pauseTimer()
+        val state = _uiState.value
+        val safeMinutes = when (state.currentMode) {
+            TimerMode.FOCUS -> minutes.coerceIn(1, 120)
+            TimerMode.SHORT_BREAK -> minutes.coerceIn(1, 30)
+            TimerMode.LONG_BREAK -> minutes.coerceIn(1, 60)
+        }
+        val durationSeconds = safeMinutes * 60
+        _uiState.update { current ->
+            when (current.currentMode) {
+                TimerMode.FOCUS -> current.copy(
+                    focusDurationMinutes = safeMinutes,
+                    timeLeftSeconds = durationSeconds,
+                    totalTimeSeconds = durationSeconds
+                )
+                TimerMode.SHORT_BREAK -> current.copy(
+                    shortBreakDurationMinutes = safeMinutes,
+                    timeLeftSeconds = durationSeconds,
+                    totalTimeSeconds = durationSeconds
+                )
+                TimerMode.LONG_BREAK -> current.copy(
+                    longBreakDurationMinutes = safeMinutes,
+                    timeLeftSeconds = durationSeconds,
+                    totalTimeSeconds = durationSeconds
+                )
+            }
+        }
+        saveToPrefs()
+    }
+
+    fun adjustTime(deltaMinutes: Int) {
+        val state = _uiState.value
+        val deltaSeconds = deltaMinutes * 60
+        if (state.isRunning) {
+            val newTimeLeft = (state.timeLeftSeconds + deltaSeconds).coerceAtLeast(60)
+            val newTotal = maxOf(state.totalTimeSeconds, newTimeLeft)
+            _uiState.update { it.copy(timeLeftSeconds = newTimeLeft, totalTimeSeconds = newTotal) }
+            val targetEndTime = System.currentTimeMillis() + (newTimeLeft * 1000L)
+            startTimerJob(targetEndTime)
+            saveToPrefs()
+        } else {
+            val currentMinutes = state.timeLeftSeconds / 60
+            val safeMinutes = (currentMinutes + deltaMinutes).coerceIn(1, 120)
+            val durationSeconds = safeMinutes * 60
+            _uiState.update {
+                it.copy(
+                    timeLeftSeconds = durationSeconds,
+                    totalTimeSeconds = durationSeconds
+                )
+            }
+            saveToPrefs()
+        }
+    }
+
+    fun clearHistory() {
+        _uiState.update {
+            val updated = it.copy(history = emptyList())
+            calculateStats(updated)
+        }
+        saveToPrefs()
     }
 
     private fun startTimerJob(targetEndTime: Long) {
