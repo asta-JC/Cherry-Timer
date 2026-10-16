@@ -1,74 +1,94 @@
-# Cherry Timer 🍒⏱️
+<div align="center">
 
-> A stunning, high-performance Pomodoro and Focus Timer app — the spiritual sequel to **Cherry Calc**. Built with modern Jetpack Compose, Material 3 Expressive, and Navigation 3.
+# 🍒 Cherry Timer
 
----
+<p align="center">
+  <img src="app/src/main/res/drawable/icon.png" width="108" alt="Cherry Timer Logo" />
+</p>
 
-## 🎨 Design System & Theme
+> A stunning, high-performance Pomodoro and Focus Timer app built with modern Jetpack Compose, circular progress visualization, and customizable intervals. ⏱️✨
 
-Cherry Timer features the signature **Cherry Dark** aesthetic, crafted for deep focus, minimal eye strain, and vibrant contrast:
-
-| Token / Element | Hex Code / Style | Description |
-|-----------------|------------------|-------------|
-| **Background**  | `#09080D`        | Deep obsidian background for OLED displays |
-| **Surfaces**    | `#1A1520`        | Elevated cards, sheets, and bottom navigation containers |
-| **Borders**     | `#5A1A30`        | Deep crimson structural outlines and dividers |
-| **Cherry Accent**| `#FF2D6B`       | Vibrant cherry pink-red neon glow for active timers and primary actions |
-| **Typography**  | Material 3 Expressive | Clean, readable hierarchy with large display numerals |
+</div>
 
 ---
 
-## 📸 Screenshots
+## 📱 Overview
+
+**Cherry Timer** is a productivity and focus companion designed with a deep obsidian OLED theme and cherry neon accents. It features Pomodoro intervals, countdown timers, stopwatch with lap tracking, procedural audio chimes, tactile haptics, and background-safe timekeeping.
+
+---
+
+## ✨ Key Features
+
+- 🍅 **Pomodoro Focus & Break Modes**: Seamlessly toggle between deep focus sessions, short breaks, and long breaks with custom durations.
+- ⭕ **Glowing Circular Progress Ring**: M3 Expressive timer ring with pulsing neon cherry glow and buttery-smooth progress animation.
+- 🔒 **Background-Safe Timekeeping**: Coroutine timestamp delta tracking ensures reliable countdown accuracy even when backgrounded or locked.
+- 📊 **Productivity Analytics & Stats**: View completed focus totals, session streaks, and focus efficiency at a glance.
+- 📜 **Session History Sheet**: Comprehensive log of past focus sessions with durations, timestamps, and tags.
+- 🔔 **Procedural Audio Chimes**: Built-in synthetic audio chimes generated via `AudioTrack` with zero external audio assets required.
+- 📳 **Tactile Haptic Feedback**: Satisfying tactile feedback pulses for button clicks, timer completions, and mode switches.
+- 📱 **Adaptive Layouts**: Responsive layout adapting from single-pane mobile screens to two-pane split layouts on foldables and tablets.
+
+---
+
+## 📸 Screenshots & UI Preview
 
 | Focus Session | Short Break | Timer Settings |
-|---------------|-------------|----------------|
-| ![Focus Session](screenshots/focus-session.jpg) | ![Short Break](screenshots/short-break.jpg) | ![Timer Settings](screenshots/timer-settings.jpg) |
-
----
-
-## 🚀 Core Features
-
-- **Pomodoro Focus & Break Modes**: Easily switch between deep focus sessions, short breaks, and long breaks with customizable durations.
-- **Glowing Circular Progress Ring**: Immersive M3 Expressive timer ring featuring a pulsing neon cherry glow and buttery-smooth progress animation.
-- **Background-Safe Timekeeping**: Built with robust coroutine timestamp tracking to ensure accurate countdowns even when the app is backgrounded or device is locked.
-- **Productivity Analytics & Stats**: Track daily completed focus totals, session streaks, and focus efficiency at a glance.
-- **Session History Sheet**: Comprehensive log of completed pomodoro sessions with timestamps, durations, and session tags.
-- **Interactive Settings Sheet**: Tailor focus lengths, break durations, auto-start options, and sound/haptic preferences.
-- **Procedural Audio Chimes**: Built-in synthetic audio generation using `AudioTrack` — zero external audio assets required.
-- **Tactile Haptic Feedback**: Satisfying haptic pulses for button interactions, timer completions, and mode switches.
-- **Adaptive Two-Pane Layout**: Seamlessly adapts from single-pane mobile screens to two-pane split layouts on tablets, foldables, and desktop form factors using Compose Material Adaptive.
+| :---: | :---: | :---: |
+| <img src="screenshots/focus-session.jpg" width="220" alt="Focus Session" /> | <img src="screenshots/short-break.jpg" width="220" alt="Short Break" /> | <img src="screenshots/timer-settings.jpg" width="220" alt="Timer Settings" /> |
 
 ---
 
 ## 🛠️ Tech Stack & Architecture
 
-- **Kotlin**: 100% Kotlin codebase utilizing Coroutines and Flow for reactive asynchronous state management.
-- **Jetpack Compose**: Declarative UI built entirely with Compose and Material 3 Expressive components.
-- **Navigation 3 (`androidx.navigation3`)**: Modern type-safe navigation and state-driven routing.
-- **Compose Material Adaptive**: Multi-pane scaffold and window size class support for foldable and large-screen devices.
-- **Audio & Haptics**: Low-level `AudioTrack` sound synthesis and Android `Vibrator` haptics.
-- **Edge-to-Edge**: Fully immersive edge-to-edge UI handling system window insets seamlessly.
+- **UI Toolkit**: [Jetpack Compose](https://developer.android.com/jetpack/compose) with Material 3 Expressive
+- **Architecture**: MVVM with Kotlin Coroutines & `StateFlow`
+- **Audio Engine**: Android `AudioTrack` procedural frequency synthesizer
+- **Layouts**: Compose Adaptive layouts for large screens and foldables
+- **Language**: 100% [Kotlin](https://kotlinlang.org/)
 
 ---
 
-## 📱 Getting Started & Build Instructions
+## 📂 Project Structure
+
+```tree
+com.asta.cherrytimer/
+├── navigation/             # Navigation destinations & host
+├── ui/                     # TimerScreen, circular progress ring, settings, and theme
+├── util/                   # Audio chime generator, haptic manager, formatters
+├── viewmodel/              # TimerViewModel, TimerUiState, session statistics
+└── MainActivity.kt         # Entry point activity & lifecycle host
+```
+
+---
+
+## 🚀 Getting Started & Build Instructions
 
 ### Prerequisites
-- **Android Studio**: Ladybug / Koala or newer (supporting Jetpack Compose and AGP 8.x).
-- **JDK**: Java 17 or higher.
-- **Android SDK**: API level 24 (Nougat) to 35 (Android 15+).
+- Android Studio Ladybug or newer
+- JDK 17 or higher
+- Android SDK 24+ (Target SDK 35)
 
-### Quick Build & Run
-1. Clone the repository:
+### Build Steps
+
+1. **Clone the repository**:
    ```bash
    git clone https://github.com/asta-JC/Cherry-Timer.git
    cd CherryTimer
    ```
-2. Build the debug APK via Gradle:
-   ```bash
-   ./gradlew :app:assembleDebug
-   ```
-3. Run unit and instrumentation tests:
+
+2. **Open in Android Studio**:
+   - Open Android Studio and select **Open**.
+   - Navigate to the cloned `CherryTimer` directory and let Gradle sync.
+
+3. **Build & Run**:
+   - Connect an Android device or start an emulator.
+   - Run the app via Android Studio or execute via terminal:
+     ```bash
+     ./gradlew :app:assembleDebug
+     ```
+
+4. **Run Unit Tests**:
    ```bash
    ./gradlew :app:testDebugUnitTest
    ```
