@@ -1,6 +1,9 @@
 package com.asta.cherrytimer.ui.screens
 
 import android.content.res.Configuration
+import androidx.compose.material.icons.rounded.DarkMode
+import androidx.compose.material.icons.rounded.LightMode
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -26,6 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.asta.cherrytimer.ui.components.*
 import com.asta.cherrytimer.ui.theme.*
 import com.asta.cherrytimer.util.CherryHapticsUtil
@@ -38,7 +42,7 @@ import java.util.*
 fun TimerScreen(
     viewModel: PomodoroTimerViewModel = viewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val haptic = LocalHapticFeedback.current
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -57,45 +61,20 @@ fun TimerScreen(
             TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(38.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(CherrySurface)
-                                .border(1.dp, CherryBorder, RoundedCornerShape(12.dp)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            MiniCherryIcon(size = 24.dp)
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                text = "CHERRY TIMER",
-                                color = CherryMainText,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp,
-                                fontFamily = FontFamily.Monospace,
-                                letterSpacing = 2.sp
-                            )
-                            Text(
-                                text = "Stay Focused & Fresh",
-                                color = CherryMutedText,
-                                fontSize = 11.sp
-                            )
-                        }
+                        CherryBrand(Modifier.size(32.dp).padding(2.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Cherry Timer", color = CherryMainText, fontWeight = FontWeight.SemiBold,
+                            fontSize = 20.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+
                     }
                 },
                 actions = {
-                    // Sound Toggle
-                    IconButton(onClick = {
-                        CherryHapticsUtil.triggerClick(haptic)
-                        viewModel.toggleSound(!uiState.soundEnabled)
-                    }) {
-                        Icon(
-                            imageVector = if (uiState.soundEnabled) Icons.Rounded.Notifications else Icons.Rounded.NotificationsOff,
-                            contentDescription = "Toggle Sound",
-                            tint = if (uiState.soundEnabled) CherryPrimary else CherryMutedText
-                        )
+                    val setAppearance = LocalSetAppearance.current
+                    val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+                    IconToggleButton(checked = dark, onCheckedChange = { setAppearance(if (it) "dark" else "light") }) {
+                        Icon(if (dark) Icons.Rounded.DarkMode else Icons.Rounded.LightMode,
+                            contentDescription = if (dark) "Switch to light mode" else "Switch to dark mode",
+                            tint = CherryPrimary)
                     }
 
                     // History Button

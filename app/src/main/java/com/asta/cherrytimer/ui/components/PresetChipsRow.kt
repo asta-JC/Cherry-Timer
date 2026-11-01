@@ -2,6 +2,8 @@ package com.asta.cherrytimer.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -53,14 +55,14 @@ fun PresetChipsRow(
     val stepMinutes = if (uiState.currentMode == TimerMode.SHORT_BREAK) 1 else 5
 
     Row(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Quick Decrease Button (-5m or -1m)
         Box(
             modifier = Modifier
-                .size(36.dp)
+                .size(48.dp)
                 .clip(CircleShape)
                 .background(CherrySurface)
                 .border(1.dp, CherryBorder, CircleShape)
@@ -95,6 +97,7 @@ fun PresetChipsRow(
 
                 Box(
                     modifier = Modifier
+                        .heightIn(min = 48.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .background(chipBg)
                         .border(1.dp, chipBorder, RoundedCornerShape(12.dp))
@@ -120,7 +123,7 @@ fun PresetChipsRow(
         // Quick Increase Button (+5m or +1m)
         Box(
             modifier = Modifier
-                .size(36.dp)
+                .size(48.dp)
                 .clip(CircleShape)
                 .background(CherrySurface)
                 .border(1.dp, CherryBorder, CircleShape)

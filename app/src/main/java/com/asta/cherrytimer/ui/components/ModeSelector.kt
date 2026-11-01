@@ -4,6 +4,8 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -37,8 +39,8 @@ fun ModeSelector(
 ) {
     val modes = listOf(
         Triple(TimerMode.FOCUS, "Focus", "⏱️"),
-        Triple(TimerMode.SHORT_BREAK, "Short Break", "☕"),
-        Triple(TimerMode.LONG_BREAK, "Long Break", "🌴")
+        Triple(TimerMode.SHORT_BREAK, "Short break", "☕"),
+        Triple(TimerMode.LONG_BREAK, "Long break", "🌴")
     )
 
     Row(
@@ -48,7 +50,8 @@ fun ModeSelector(
             .background(CherrySurface)
             .border(1.dp, CherryBorder, RoundedCornerShape(20.dp))
             .padding(4.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         modes.forEach { (mode, label, icon) ->
             val isSelected = currentMode == mode
@@ -60,7 +63,7 @@ fun ModeSelector(
             )
 
             val animTextColor by animateColorAsState(
-                targetValue = if (isSelected) CherryMainText else CherryMutedText,
+                targetValue = if (isSelected) CherryOnPrimary else CherryMutedText,
                 animationSpec = tween(durationMillis = 200),
                 label = "TabTextColor"
             )
@@ -80,12 +83,13 @@ fun ModeSelector(
                             Modifier.background(animBgColor)
                         }
                     )
-                    .clickable {
+                    .selectable(selected = isSelected, role = Role.Tab, onClick = {
                         if (!isSelected) {
                             CherryHapticsUtil.triggerClick(haptic)
                             viewModel.switchMode(mode)
                         }
-                    }
+                    })
+                    .heightIn(min = 48.dp)
                     .padding(vertical = 10.dp),
                 contentAlignment = Alignment.Center
             ) {
@@ -93,11 +97,6 @@ fun ModeSelector(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
                 ) {
-                    Text(
-                        text = icon,
-                        fontSize = 13.sp
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = label,
                         color = animTextColor,

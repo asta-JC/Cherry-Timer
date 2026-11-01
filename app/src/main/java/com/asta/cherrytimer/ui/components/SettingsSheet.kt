@@ -83,6 +83,18 @@ fun SettingsSheet(
                 )
             }
 
+            val appearance = LocalAppearance.current
+            val setAppearance = LocalSetAppearance.current
+            Text("Appearance", style = MaterialTheme.typography.titleMedium)
+            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                listOf("system", "light", "dark").forEachIndexed { index, mode ->
+                    SegmentedButton(selected = appearance == mode, onClick = { setAppearance(mode) },
+                        shape = SegmentedButtonDefaults.itemShape(index, 3)) {
+                        Text(mode.replaceFirstChar { it.uppercase() })
+                    }
+                }
+            }
+
             // --- 1. Focus Duration Stepper ---
             DurationSettingCard(
                 title = "Focus Duration",
@@ -237,12 +249,11 @@ private fun DurationSettingCard(
             .padding(16.dp)
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Column(modifier = Modifier.weight(1f)) {
+                Column(modifier = Modifier.fillMaxWidth()) {
                     Text(
                         text = title,
                         color = CherryMainText,
@@ -263,7 +274,7 @@ private fun DurationSettingCard(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(32.dp)
+                            .size(48.dp)
                             .clip(CircleShape)
                             .background(CherrySurface)
                             .border(1.dp, CherryBorder, CircleShape)
@@ -291,7 +302,7 @@ private fun DurationSettingCard(
 
                     Box(
                         modifier = Modifier
-                            .size(32.dp)
+                            .size(48.dp)
                             .clip(CircleShape)
                             .background(CherrySurface)
                             .border(1.dp, CherryBorder, CircleShape)
@@ -312,23 +323,24 @@ private fun DurationSettingCard(
             }
 
             // Quick preset pills
-            Row(
+            FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically
             ) {
                 presetOptions.forEach { preset ->
                     val isSelected = currentMinutes == preset
                     Box(
                         modifier = Modifier
+                            .heightIn(min = 48.dp)
                             .clip(RoundedCornerShape(8.dp))
                             .background(if (isSelected) CherryPrimary else CherrySurface)
                             .border(1.dp, if (isSelected) CherryPrimary else CherryBorder, RoundedCornerShape(8.dp))
                             .clickable { onValueChange(preset) }
-                            .padding(horizontal = 10.dp, vertical = 5.dp)
+                            .padding(horizontal = 10.dp, vertical = 5.dp),
+                        contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = "${preset}m",
-                            color = if (isSelected) CherryMainText else CherryMutedText,
+                            color = if (isSelected) CherryOnPrimary else CherryMutedText,
                             fontSize = 11.sp,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                         )

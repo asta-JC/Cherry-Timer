@@ -41,10 +41,10 @@ fun TimerControls(
     val isPausedMidway = !uiState.isRunning && uiState.timeLeftSeconds < uiState.totalTimeSeconds
 
     val primaryActionText = when {
-        uiState.isRunning -> "PAUSE"
-        isPausedMidway -> "RESUME"
-        uiState.currentMode == TimerMode.FOCUS -> "START FOCUS"
-        else -> "START BREAK"
+        uiState.isRunning -> "Pause"
+        isPausedMidway -> "Resume"
+        uiState.currentMode == TimerMode.FOCUS -> "Start focus"
+        else -> "Start break"
     }
 
     val primaryActionIcon = if (uiState.isRunning) {
@@ -89,8 +89,7 @@ fun TimerControls(
             },
             modifier = Modifier
                 .height(58.dp)
-                .weight(1f)
-                .shadow(elevation = 12.dp, shape = CircleShape, spotColor = CherryPrimary),
+                .weight(1f),
             colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
             contentPadding = PaddingValues(0.dp),
             shape = CircleShape
@@ -107,14 +106,14 @@ fun TimerControls(
                 ) {
                     Icon(
                         imageVector = primaryActionIcon,
-                        contentDescription = primaryActionText,
-                        tint = CherryMainText,
+                        contentDescription = null,
+                        tint = CherryOnPrimary,
                         modifier = Modifier.size(24.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = primaryActionText,
-                        color = CherryMainText,
+                        color = CherryOnPrimary,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.2.sp

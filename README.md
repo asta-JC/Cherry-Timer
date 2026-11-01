@@ -1,106 +1,116 @@
 <div align="center">
-
-# 🍒 Cherry Timer
-
-<p align="center">
-  <img src="app/src/main/res/drawable/icon.png" width="108" alt="Cherry Timer Logo" />
-</p>
-
-> A stunning, high-performance Pomodoro and Focus Timer app built with modern Jetpack Compose, circular progress visualization, and customizable intervals. ⏱️✨
-
+  <img src="timer.svg" width="96" alt="Cherry Timer app icon" />
+  <h1>Cherry Timer</h1>
+  <p><strong>Make room for focus and a little rest.</strong></p>
+  <p>A Pomodoro timer with flexible focus sessions, breaks, and a clear view of your daily progress.</p>
+  <p>
+    <img src="https://img.shields.io/badge/version-1.1-AF294A?style=flat-square" alt="Version 1.1" />
+    <img src="https://img.shields.io/badge/Android-7.0%2B-698269?style=flat-square" alt="Android 7.0 or newer" />
+    <img src="https://img.shields.io/badge/Kotlin-Jetpack_Compose-78616B?style=flat-square" alt="Kotlin and Jetpack Compose" />
+  </p>
+  <p><a href="#screenshots">Screenshots</a> · <a href="#features">Features</a> · <a href="#getting-started">Get started</a> · <a href="https://github.com/asta-JC/Cherry-Timer/issues">Feedback</a></p>
 </div>
 
 ---
 
-## 📱 Overview
+## Overview
 
-**Cherry Timer** is a productivity and focus companion designed with a deep obsidian OLED theme and cherry neon accents. It features Pomodoro intervals, countdown timers, stopwatch with lap tracking, procedural audio chimes, tactile haptics, and background-safe timekeeping.
+Choose a focus interval, add an optional task goal, and start the countdown. Cherry Timer keeps focus sessions and short or long breaks together, with saved preferences, session history, and daily totals to help you build a routine.
 
----
+## Screenshots
 
-## ✨ Key Features
+<table>
+  <tr><th width="33%">Timer</th><th width="33%">Focus session</th><th width="33%">Settings</th></tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/timer-light.png" width="250" alt="Light timer screen with duration presets and daily progress" /></td>
+    <td align="center"><img src="docs/screenshots/focus-light.png" width="250" alt="Running focus countdown with a pause control in light mode" /></td>
+    <td align="center"><img src="docs/screenshots/settings-light.png" width="250" alt="Light settings screen with appearance and session duration choices" /></td>
+  </tr>
+  <tr><td align="center">Pick your interval.</td><td align="center">Stay with one task.</td><td align="center">Set your own rhythm.</td></tr>
+</table>
 
-- 🍅 **Pomodoro Focus & Break Modes**: Seamlessly toggle between deep focus sessions, short breaks, and long breaks with custom durations.
-- ⭕ **Glowing Circular Progress Ring**: M3 Expressive timer ring with pulsing neon cherry glow and buttery-smooth progress animation.
-- 🔒 **Background-Safe Timekeeping**: Coroutine timestamp delta tracking ensures reliable countdown accuracy even when backgrounded or locked.
-- 📊 **Productivity Analytics & Stats**: View completed focus totals, session streaks, and focus efficiency at a glance.
-- 📜 **Session History Sheet**: Comprehensive log of past focus sessions with durations, timestamps, and tags.
-- 🔔 **Procedural Audio Chimes**: Built-in synthetic audio chimes generated via `AudioTrack` with zero external audio assets required.
-- 📳 **Tactile Haptic Feedback**: Satisfying tactile feedback pulses for button clicks, timer completions, and mode switches.
-- 📱 **Adaptive Layouts**: Responsive layout adapting from single-pane mobile screens to two-pane split layouts on foldables and tablets.
+Captured from the real app on a Samsung Galaxy S22 Ultra (SM-S908N), in Light appearance. System bars are cropped out; the running session is a demonstration.
 
----
+## Features
 
-## 📸 Screenshots & UI Preview
+- **Focus and break modes:** switch between focus, short breaks, and long breaks with customizable durations and quick presets.
+- **Clear timer controls:** start, pause, resume, reset, or skip an interval, with a circular progress display and round indicators.
+- **Task goals:** give a session a task name and review completed focus sessions in history.
+- **Daily progress:** see completed focus sessions, focus minutes, and your recorded streak.
+- **Sound and haptics:** enable completion chimes, preview the sound, and optionally start the next interval automatically.
+- **Saved appearance:** follow the system or choose Light or Dark, with a quick theme toggle and shared CherryApps branding.
 
-| Focus Session | Short Break | Timer Settings |
-| :---: | :---: | :---: |
-| <img src="screenshots/focus-session.jpg" width="220" alt="Focus Session" /> | <img src="screenshots/short-break.jpg" width="220" alt="Short Break" /> | <img src="screenshots/timer-settings.jpg" width="220" alt="Timer Settings" /> |
+## Compatibility
 
----
+| Item | Support |
+| --- | --- |
+| Platform | Android 7.0 / API 24 and newer |
+| Layout | Scrollable phone UI and a two-pane layout at larger widths |
+| Timer persistence | Saves the target end time and restores the remaining countdown when reopened |
+| Completion alerts | No foreground service or exact-alarm scheduling; alerts while the process is stopped are not guaranteed |
 
-## 🛠️ Tech Stack & Architecture
+## Getting started
 
-- **UI Toolkit**: [Jetpack Compose](https://developer.android.com/jetpack/compose) with Material 3 Expressive
-- **Architecture**: MVVM with Kotlin Coroutines & `StateFlow`
-- **Audio Engine**: Android `AudioTrack` procedural frequency synthesizer
-- **Layouts**: Compose Adaptive layouts for large screens and foldables
-- **Language**: 100% [Kotlin](https://kotlinlang.org/)
+### Download
 
----
+The v1.1 APK is debug/test-signed using the existing development certificate. It is intended for testing, rather than a production-signed distribution.
 
-## 📂 Project Structure
+### Requirements
 
-```tree
-com.asta.cherrytimer/
-├── navigation/             # Navigation destinations & host
-├── ui/                     # TimerScreen, circular progress ring, settings, and theme
-├── util/                   # Audio chime generator, haptic manager, formatters
-├── viewmodel/              # TimerViewModel, TimerUiState, session statistics
-└── MainActivity.kt         # Entry point activity & lifecycle host
+- Android Studio with support for the project's Android Gradle plugin.
+- JDK 25, as selected by the Gradle daemon toolchain configuration.
+- Android SDK platform 37 and a connected physical Android device for running the app.
+
+### Build and run
+
+```bash
+git clone https://github.com/asta-JC/Cherry-Timer.git
+cd Cherry-Timer
+./gradlew :app:assembleDebug
+adb devices
+adb -s YOUR_DEVICE_SERIAL install -r app/build/outputs/apk/debug/app-debug.apk
+adb -s YOUR_DEVICE_SERIAL shell am start -n com.asta.cherrytimer/.MainActivity
 ```
 
----
+Set `sdk.dir` in your local `local.properties` if Android Studio has not already configured it. Replace `YOUR_DEVICE_SERIAL` with the physical device you intend to use. Installing with `-r` preserves app data when the installed app uses the same signing certificate.
 
-## 🚀 Getting Started & Build Instructions
+### Tests
 
-### Prerequisites
-- Android Studio Ladybug or newer
-- JDK 17 or higher
-- Android SDK 24+ (Target SDK 35)
+```bash
+./gradlew :app:testDebugUnitTest :app:lintDebug
+```
 
-### Build Steps
+## Built with
 
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/asta-JC/Cherry-Timer.git
-   cd CherryTimer
-   ```
+| Layer | Technology |
+| --- | --- |
+| Language | Kotlin |
+| Interface | Jetpack Compose and Material 3 |
+| Navigation | Navigation 3 |
+| State | Android ViewModel, StateFlow, Kotlin coroutines |
+| Persistence | SharedPreferences and Kotlin serialization |
+| Audio | Android AudioTrack |
 
-2. **Open in Android Studio**:
-   - Open Android Studio and select **Open**.
-   - Navigate to the cloned `CherryTimer` directory and let Gradle sync.
+## What's new in 1.1
 
-3. **Build & Run**:
-   - Connect an Android device or start an emulator.
-   - Run the app via Android Studio or execute via terminal:
-     ```bash
-     ./gradlew :app:assembleDebug
-     ```
+- Shared CherryApps cream/rose and plum themes with the full header logo.
+- A saved Light/Dark toggle and a System appearance option.
+- Larger timer controls, scrolling presets, and improved layouts for larger text.
+- The vibration permission required by the existing completion haptics.
 
-4. **Run Unit Tests**:
-   ```bash
-   ./gradlew :app:testDebugUnitTest
-   ```
+## Feedback
 
----
+Report issues or suggest improvements in [GitHub Issues](https://github.com/asta-JC/Cherry-Timer/issues). Include your Android version, device model, app version, and short steps to reproduce. Use non-sensitive examples and screenshots.
 
-## 📄 License
+## License & credits
 
 This project is developed as part of Asta's project series. Feel free to use and adapt for personal and educational use!
+
+Built with Android Jetpack, Kotlin, and their open-source dependencies; their respective licenses apply.
 
 ---
 
 <p align="center">
-  Made with ❤️ & 🍒 by Asta
+  <strong>Made with ❤️ &amp; 🍒 by Asta</strong><br />
+  <sub>Part of the CherryApp family.</sub>
 </p>

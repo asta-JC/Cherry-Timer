@@ -206,7 +206,7 @@ private fun TaskGoalDialog(
                         ) {
                             Text(
                                 text = goal,
-                                color = if (isSelected) CherryMainText else CherryMutedText,
+                                color = if (isSelected) CherryOnPrimary else CherryMutedText,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Medium
                             )

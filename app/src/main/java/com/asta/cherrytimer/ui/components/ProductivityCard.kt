@@ -47,21 +47,20 @@ fun ProductivityCard(
             .padding(16.dp)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            Row(
+            FlowRow(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     MiniCherryIcon(size = 18.dp)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "TODAY'S PRODUCTIVITY",
+                        text = "Today’s productivity",
                         color = CherryMutedText,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.2.sp,
-                        fontFamily = FontFamily.Monospace
+                        letterSpacing = 0.sp
                     )
                 }
 

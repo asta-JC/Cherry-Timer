@@ -4,6 +4,9 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
@@ -72,22 +75,25 @@ fun CherryTimerRing(
 
     val ringColorStart = when (uiState.currentMode) {
         TimerMode.FOCUS -> CherryPrimaryGradientStart
-        TimerMode.SHORT_BREAK -> Color(0xFFFF4081)
-        TimerMode.LONG_BREAK -> Color(0xFFE040FB)
+        TimerMode.SHORT_BREAK -> CherryPrimary
+        TimerMode.LONG_BREAK -> CherryLeafGreen
     }
 
     val ringColorEnd = when (uiState.currentMode) {
         TimerMode.FOCUS -> CherryPrimaryGradientEnd
         TimerMode.SHORT_BREAK -> CherryPrimary
-        TimerMode.LONG_BREAK -> Color(0xFF9C27B0)
+        TimerMode.LONG_BREAK -> CherryLeafGreen
     }
 
     Box(
         modifier = modifier
-            .size(diameter)
+            .sizeIn(maxWidth = diameter, maxHeight = diameter)
+            .aspectRatio(1f)
             .scale(bounceScale.value)
             .clip(CircleShape)
+            .semantics { contentDescription = "${if (uiState.isRunning) "Pause" else "Start"} timer, $timeFormatted remaining" }
             .clickable(
+                role = Role.Button,
                 indication = null,
                 interactionSource = remember { MutableInteractionSource() },
                 onClick = onRingClick
@@ -95,6 +101,9 @@ fun CherryTimerRing(
         contentAlignment = Alignment.Center
     ) {
         // --- 1. Canvas Circular Progress Track & Head Cap ---
+        val CherryGlow = CherryGlow
+        val CherryTrack = CherryTrack
+        val CherryBorder = CherryBorder
         Canvas(modifier = Modifier.fillMaxSize()) {
             val w = size.width
             val h = size.height
@@ -188,13 +197,7 @@ fun CherryTimerRing(
             modifier = Modifier.padding(horizontal = 24.dp)
         ) {
             // The centerpiece Cherry Artwork
-            CherryArtwork(
-                isRunning = uiState.isRunning,
-                primaryColor = ringColorStart,
-                glowEnabled = true,
-                modifier = Modifier
-                    .size(width = 96.dp, height = 76.dp)
-            )
+            CherryBrand(Modifier.size(width = 80.dp, height = 64.dp))
 
             Spacer(modifier = Modifier.height(2.dp))
 
