@@ -8,6 +8,7 @@
     <img src="https://img.shields.io/badge/Android-7.0%2B-698269?style=flat-square" alt="Android 7.0 or newer" />
     <img src="https://img.shields.io/badge/Kotlin-Jetpack_Compose-78616B?style=flat-square" alt="Kotlin and Jetpack Compose" />
   </p>
+  <p><a href="https://github.com/asta-JC/Cherry-Timer/releases/download/v1.1/Cherry-Timer_v1.1.apk">Download APK</a> · <a href="https://github.com/asta-JC/Cherry-Timer/releases/tag/v1.1">Release notes</a></p>
   <p><a href="#screenshots">Screenshots</a> · <a href="#features">Features</a> · <a href="#getting-started">Get started</a> · <a href="https://github.com/asta-JC/Cherry-Timer/issues">Feedback</a></p>
 </div>
 
@@ -52,6 +53,8 @@ Captured from the real app on a Samsung Galaxy S22 Ultra (SM-S908N), in Light ap
 ## Getting started
 
 ### Download
+
+Install [Cherry-Timer_v1.1.apk](https://github.com/asta-JC/Cherry-Timer/releases/download/v1.1/Cherry-Timer_v1.1.apk) from [GitHub Releases](https://github.com/asta-JC/Cherry-Timer/releases/tag/v1.1). A [SHA-256 checksum file](https://github.com/asta-JC/Cherry-Timer/releases/download/v1.1/SHA256SUMS.txt) is included with the release.
 
 The v1.1 APK is debug/test-signed using the existing development certificate. It is intended for testing, rather than a production-signed distribution.
 
